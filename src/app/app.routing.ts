@@ -5,6 +5,7 @@ import { AppComponent } from './app.component';
 
 const routes: Routes = [
   { path: 'analyze/:id', component: AppComponent },
+  { path: 'crowd', component: CrowdSourcingComponent }
   { path: '', component: AppComponent }
 ];
 
