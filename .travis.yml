@@ -6,6 +6,7 @@ node_js:
   - "node"
 services:
   - docker
+  - oc
 before_install:
   # Repo for yarn
   - sudo apt-key adv --keyserver pgp.mit.edu --recv D101F7899D41F3C3
@@ -17,6 +18,8 @@ before_install:
   - npm i -g npm@^3
 install:
   - yarn
+  - oc
+  - docker
 before_script:
   - export CHROME_BIN=chromium-browser
   - export DISPLAY=:99.0
