@@ -4,6 +4,7 @@ import {
     Input,
     OnInit,
     OnChanges,
+    ViewEncapsulation,
     SimpleChanges
 } from '@angular/core';
 /** Vendor imports Go HERE */
@@ -17,7 +18,10 @@ import {
     UserStackInfoModel,
     GithubModel,
     OutlierInformationModel,
-    LicenseAnalysisModel
+    LicenseAnalysisModel,
+    ComponentConflictUnknownModel,
+    ConflictPackageModel,
+    ReallyUnknownLicenseModel
 } from '../models/stack-report.model';
 
 import {
@@ -34,17 +38,25 @@ import {
     MGithub,
     MOsio,
     MProgressMeter,
-    MGenericStackInformation
+    MGenericStackInformation,
+    MLicensesAffected,
+    MConflictsWithInLicenses,
+    MStackLicenseConflictDetails,
+    MLicenseInformation,
+    MComponentFeedback,
+    MFeedbackTemplate
 } from '../models/ui.model';
 
 @Component({
     selector: 'card-details',
     styleUrls: ['./card-details.component.less'],
+    encapsulation: ViewEncapsulation.None,
     templateUrl: './card-details.component.html'
 })
 export class CardDetailsComponent implements OnInit, OnChanges {
     @Input() cardDetails: any;
     @Input() genericInformation: MGenericStackInformation;
+    @Input() repoInfo: any;
     public report: ResultInformationModel;
     public whatCard: string;
     public details: MCardDetails = null;
@@ -66,33 +78,31 @@ export class CardDetailsComponent implements OnInit, OnChanges {
     public titleAndDescription: any = {
         [this.cardTypes.SECURITY]: {
             title: 'Components with security issues in your stack',
-            description: 'Description'
+            description: 'A list of the components affected with common vulnerabilities and exposures (CVE), component with the highest common vulnerability score (CVSS), and its CVE ID. You can take corrective actions by reporting the issues'
         },
         [this.cardTypes.INSIGHTS]: {
             title: 'Insights on alternate or additional components that can augment your stack',
-            description: 'Description'
+            description: 'A list of components that are not commonly used in similar stacks, suggestions for alternate components to replace them, and suggestions for additional components to complement your stack. Take corrective action by creating a work item in Planner or leave us feedback.'
         },
         [this.cardTypes.LICENSES]: {
             title: 'License details of components in your stack',
-            description: 'Description'
+            description: 'A list of stack and component level license conflicts, licenses unknown to Openshift.io and suggestions for alternate components to resolve these issues. Create a work item in Planner to replace these components'
         },
         [this.cardTypes.COMP_DETAILS]: {
             title: 'Component details of your manifest file',
-            description: 'Description'
+            description: 'A list of all the analyzed components that flags security, usage, and license issues in your stack and suggests alternate components to replace components with these issues. Take corrective action by creating a work item in Planner. It also lists components unknown to OSIO'
         }
     };
 
     ngOnInit() {
-        
         this.paint();
     }
 
     ngOnChanges(changes: SimpleChanges) {
         let summary: any = changes['cardDetails'];
-        
+
         if (summary) {
             this.cardDetails = <any> summary.currentValue;
-            
             if (this.cardDetails && this.cardDetails.report) {
                 this.report = this.cardDetails.report;
             } else {
@@ -101,10 +111,6 @@ export class CardDetailsComponent implements OnInit, OnChanges {
             this.whatCard = this.cardDetails && this.cardDetails.cardType || null;
             this.paint();
         }
-    }
-
-    public tabSelection(tab: MReportInformation): void {
-        console.log(tab);
     }
 
     private canInclude(cardType: string, component: MComponentInformation): boolean {
@@ -131,6 +137,23 @@ export class CardDetailsComponent implements OnInit, OnChanges {
         return false;
     }
 
+    private getMComponentFeedback(type: string, component: ComponentInformationModel): MComponentFeedback {
+        let feedback: MComponentFeedback = null;
+        if (this.genericInformation && this.genericInformation.stackId && component) {
+            feedback = new MComponentFeedback(
+                new MFeedbackTemplate(
+                    this.genericInformation.stackId,
+                    type,
+                    component.name,
+                    null,
+                    component.ecosystem
+                ),
+                this.genericInformation.baseUrl
+            );
+        }
+        return feedback;
+    }
+
     private getCompanionComponents(): Array<MRecommendationInformation> {
         let companions: Array<MRecommendationInformation> = [];
         if (this.report) {
@@ -138,20 +161,23 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                 && this.report.recommendation.companion
                 && this.report.recommendation.companion.length > 0) {
                 let comps: Array<ComponentInformationModel> = this.report.recommendation.companion;
-                
                 comps.forEach((companion: ComponentInformationModel) => {
                     let security = this.getComponentSecurity(companion);
-                    companions.push(new MRecommendationInformation(
-                        'companion',
-                        companion.reason,
-                        null,
-                        new MProgressMeter(
-                            '',
+                    let progress: MProgressMeter = null;
+                    if (companion && companion.confidence_reason) {
+                        progress = new MProgressMeter(
+                            Math.round(companion.confidence_reason) + '%',
                             Math.round(companion.confidence_reason),
                             Math.round(companion.confidence_reason) > 50 ? 'GREEN' : 'ORANGE',
                             '',
                             Math.round(companion.confidence_reason)
-                        ),
+                        );
+                    }
+                    companions.push(new MRecommendationInformation(
+                        'companion',
+                        companion.reason,
+                        this.getMComponentFeedback('companion', companion),
+                        progress,
                         new MComponentInformation(
                             companion.name,
                             companion.version,
@@ -170,8 +196,12 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                             ),
                             'Create work item',
                             true,
-                            null
-                        )
+                            null,
+                            false,
+                            null,
+                            companion.ecosystem
+                        ),
+                        this.report.manifest_file_path
                     ));
                 });
             }
@@ -261,9 +291,8 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                     ));
                     break;
                 case 'licenses':
-                    genericReport.name = 'Conflict License(s) details';
+                    genericReport.name = 'Conflicting License(s) details';
                     reportInformations.push(genericReport);
-                    debugger;
                     reportInformations.push(new MReportInformation(
                         'Unknown license(s) details',
                         'component',
@@ -291,13 +320,24 @@ export class CardDetailsComponent implements OnInit, OnChanges {
 
     private hasUnknownLicense(component: ComponentInformationModel): boolean {
         if (component) {
-            return component.license_analysis && component.license_analysis.unknown_licenses && component.license_analysis.unknown_licenses.length > 0;
+            let licenseAnalysis: StackLicenseAnalysisModel = this.getLicensesAnalysis();
+            if (licenseAnalysis &&
+                licenseAnalysis.unknown_licenses &&
+                licenseAnalysis.unknown_licenses.really_unknown &&
+                licenseAnalysis.unknown_licenses.really_unknown.length > 0
+            ) {
+                let reallyUnknown = licenseAnalysis.unknown_licenses.really_unknown;
+                reallyUnknown.forEach((unknown) => {
+                    if (unknown.package === component.name) {
+                        return true;
+                    }
+                });
+            }
         }
         return false;
     }
 
     private getUnknownLicenseComponentDetails(): Array<MComponentDetails> {
-        debugger;
         let unknownLicenseComps: Array<MComponentDetails> = null;
         let components: Array<ComponentInformationModel> = null;
         if (this.report.user_stack_info
@@ -345,13 +385,37 @@ export class CardDetailsComponent implements OnInit, OnChanges {
         return github;
     }
 
+    private getLicensesAnalysis(): StackLicenseAnalysisModel {
+        if (this.report) {
+            if (this.report.user_stack_info
+                && this.report.user_stack_info.license_analysis
+                && this.report.user_stack_info.license_analysis
+            ) {
+                return this.report.user_stack_info.license_analysis;
+            }
+        }
+        return null;
+    }
+
+    private hasLicenseIssue(component: ComponentInformationModel): boolean {
+        if (component) {
+            let analysis: StackLicenseAnalysisModel = this.getLicensesAnalysis();
+            if (analysis) {
+                return (analysis.conflict_packages
+                    && analysis.conflict_packages.length > 0)
+                    || (analysis.unknown_licenses && analysis.unknown_licenses.component_conflict &&
+                    analysis.unknown_licenses.component_conflict.length > 0);
+            }
+        }
+        return false;
+    }
+
     private getComponentInformation(component: ComponentInformationModel): MComponentInformation {
         if (component) {
             let currentVersion: string = component.version;
             let latestVersion: string = component.latest_version;
             let github: GithubModel = component.github;
-            let hasLicenseIssue: boolean = component.license_analysis && component.license_analysis.conflict_licenses && component.license_analysis.conflict_licenses.length > 0;
-            debugger;
+            let hasLicenseIssue: boolean = this.hasLicenseIssue(component);
             let isUsageOutlier: boolean = false;
             let securityDetails: MSecurityDetails = this.getComponentSecurity(component);
             let recommendation: RecommendationsModel = this.report.recommendation;
@@ -376,17 +440,21 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                             let alternate: ComponentInformationModel = alternates[i];
                             if (component.name === alternate.replaces[0].name) {
                                 let alterSecurity: MSecurityDetails = this.getComponentSecurity(alternate);
-                                recommendationInformation = new MRecommendationInformation(
-                                    'alternate',
-                                    alternate.reason,
-                                    false,
-                                    new MProgressMeter(
+                                let progress: MProgressMeter = null;
+                                if (alternate && alternate.confidence_reason) {
+                                    progress = new MProgressMeter(
                                         Math.round(alternate.confidence_reason) + '%',
                                         Math.round(alternate.confidence_reason),
                                         Math.round(alternate.confidence_reason) > 50 ? 'GREEN' : 'ORANGE',
                                         '',
                                         Math.round(alternate.confidence_reason)
-                                    ),
+                                    );
+                                }
+                                recommendationInformation = new MRecommendationInformation(
+                                    'alternate',
+                                    alternate.reason,
+                                    this.getMComponentFeedback('alternate', alternate),
+                                    progress,
                                     new MComponentInformation(
                                         alternate.name,
                                         alternate.version,
@@ -401,7 +469,10 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                                         new MOsio(alternate.osio_user_count),
                                         'Create work item',
                                         false,
-                                        null
+                                        null,
+                                        false,
+                                        null,
+                                        alternate.ecosystem
                                     )
                                 );
                                 break;
@@ -426,10 +497,114 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                 new MOsio(component.osio_user_count),
                 null,
                 true,
-                recommendationInformation
+                recommendationInformation,
+                false,
+                new MLicenseInformation(
+                    component.licenses,
+                    this.getUnknownLicenses(component),
+                    hasLicenseIssue,
+                    this.getMLicenseAffected(component)
+                ),
+                component.ecosystem,
+                this.report.manifest_file_path
             );
         }
         return null;
+    }
+
+    private getUnknownLicenses(component: ComponentInformationModel): Array<string> {
+        let unknownLicenses: Array<string> = [];
+        if (component) {
+            if (this.report) {
+                let analysis: StackLicenseAnalysisModel = this.getLicensesAnalysis();
+                if (analysis && analysis.unknown_licenses
+                    && analysis.unknown_licenses.really_unknown
+                    && analysis.unknown_licenses.really_unknown.length > 0
+                ) {
+                    let reallyUnknown: Array<ReallyUnknownLicenseModel> = analysis.unknown_licenses.really_unknown;
+                    reallyUnknown.forEach((unknown) => {
+                        if (unknown.package === component.name) {
+                            unknownLicenses.push(unknown.license);
+                        }
+                    });
+                }
+            }
+        }
+        return unknownLicenses;
+    }
+
+    private getMLicenseAffected(component: ComponentInformationModel): Array<MLicensesAffected> {
+        let licensesAffected: Array<MLicensesAffected> = null;
+        let analysis: StackLicenseAnalysisModel = this.getLicensesAnalysis();
+        if (analysis) {
+            licensesAffected = [];
+            let licenseAnalysis: StackLicenseAnalysisModel = analysis;
+            if (licenseAnalysis.status) {
+                switch (licenseAnalysis.status.toLowerCase()) {
+                    case 'componentconflict':
+                        if (licenseAnalysis.unknown_licenses
+                            && licenseAnalysis.unknown_licenses.component_conflict
+                            && licenseAnalysis.unknown_licenses.component_conflict.length > 0
+                        ) {
+                            let compConflicts: Array<ComponentConflictUnknownModel> = licenseAnalysis.unknown_licenses.component_conflict;
+
+                            let len: number = compConflicts.length;
+                            for (let i = 0; i < len; ++ i) {
+                                if (compConflicts[i] && compConflicts[i].package === component.name) {
+                                    let affectedLicenses: Array<MConflictsWithInLicenses> = [];
+                                    if (compConflicts[i].conflict_licenses && compConflicts[i].conflict_licenses.length > 0) {
+                                        compConflicts[i].conflict_licenses.forEach((license) => {
+                                            affectedLicenses.push(new MConflictsWithInLicenses(
+                                                license.license1,
+                                                license.license2
+                                            ));
+                                        });
+                                    }
+                                    licensesAffected.push(new MLicensesAffected(
+                                        affectedLicenses,
+                                        'componentconflict',
+                                        null
+                                    ));
+                                }
+                            }
+                        }
+                        break;
+                    case 'stacklicenseconflict':
+                        if (licenseAnalysis.conflict_packages
+                            && licenseAnalysis.conflict_packages.length > 0
+                        ) {
+                            let stackConflicts: Array<ConflictPackageModel> = licenseAnalysis.conflict_packages;
+
+                            let len: number = stackConflicts.length;
+                            let affectedComponents: Array<MStackLicenseConflictDetails> = [];
+                            for (let i = 0; i < len; ++ i) {
+                                if (stackConflicts[i] && stackConflicts[i].package1 === component.name) {
+                                    affectedComponents.push(new MStackLicenseConflictDetails(
+                                        stackConflicts[i].license2,
+                                        stackConflicts[i].package2,
+                                        stackConflicts[i].license1
+                                    ));
+                                }
+                            }
+                            licensesAffected.push(new MLicensesAffected(
+                                null,
+                                'stackconflict',
+                                affectedComponents
+                            ));
+                        }
+                        break;
+                    case 'successful':
+                        break;
+                    case 'unknown':
+                        break;
+                    case 'failure':
+                        break;
+                    default:
+
+                }
+            }
+        }
+        return licensesAffected;
     }
 
     private getComponentSecurityInformation(component: ComponentInformationModel): MSecurityDetails {
@@ -458,7 +633,7 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                     maxIssue.CVE
                 );
                 securityDetails.progressReport = new MProgressMeter(
-                    '',
+                    Number(maxIssue.CVSS) + '/10',
                     Number(maxIssue.CVSS),
                     Number(maxIssue.CVSS) >= 7 ? '#ff6162' : 'ORANGE',
                     '',
@@ -536,7 +711,7 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                 headers.push(new MComponentHeaderColumn(
                     'confidence',
                     'Confidence Score',
-                    'float-left medium'
+                    'float-left extra-medium'
                 ));
                 headers.push(new MComponentHeaderColumn(
                     'feedback',
@@ -613,6 +788,14 @@ export class CardDetailsComponent implements OnInit, OnChanges {
             default:
                 break;
         }
+        headers.push(new MComponentHeaderColumn(
+            'collapse',
+            '',
+            'float-right'
+        ));
+        if (cardType === 'compDetails' && tabNo === 2) {
+            headers.pop();
+        }
         return headers;
     }
 
@@ -633,6 +816,9 @@ export class CardDetailsComponent implements OnInit, OnChanges {
                     report
                 ));
             });
+            if (this.tabs[0]) {
+                this.tabs[0].active = true;
+            }
         }
     }
 }

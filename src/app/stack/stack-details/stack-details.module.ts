@@ -16,18 +16,29 @@ import {FeedbackModule} from '../feedback/feedback.module';
 import {UserIntentModule} from '../../user-intent/user-intent.module';
 /** New UX */
 
+/** Stack Report Revamp - Latest */
+import { ReportSummaryModule } from '../report-summary/report-summary.module';
+import { CardDetailsModule } from '../card-details/card-details.module';
+/** Stack Report Revamp - Latest */
+
+const revampImports = [
+  ReportSummaryModule,
+  CardDetailsModule
+];
+
 @NgModule({
   imports: [
     CommonModule,
     HttpModule,
     FormsModule,
     ModalModule,
-    StackLevelModule,
+    // StackLevelModule,
     FeedbackModule,
-    ComponentLevelModule,
+    // ComponentLevelModule,
     UserIntentModule,
     AccordionModule.forRoot(),
-    TabsModule.forRoot()
+    TabsModule.forRoot(),
+    ...revampImports
   ],
   declarations: [
     StackDetailsComponent

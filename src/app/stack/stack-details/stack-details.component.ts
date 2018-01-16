@@ -5,12 +5,25 @@ import {StackAnalysesService} from '../stack-analyses.service';
 import {getStackReportModel} from '../utils/stack-api-utils';
 import {StackReportModel, ResultInformationModel, UserStackInfoModel, ComponentInformationModel, RecommendationsModel} from '../models/stack-report.model';
 
+/**
+ * New Stack Report Revamp - Begin
+ */
+import {
+    MCardDetails,
+    MGenericStackInformation
+} from '../models/ui.model';
+import { SaveState } from '../utils/SaveState';
+import { ReportSummaryUtils } from '../utils/report-summary-utils';
+/**
+ * New Stack Report Revamp - End
+ */
+
 @Component({
     selector: 'stack-details',
-    templateUrl: './stack-details.component.html',
     providers: [StackAnalysesService],
     encapsulation: ViewEncapsulation.None,
-    styleUrls: ['./stack-details.component.scss'],
+    styleUrls: ['./stack-details.component.less'],
+    templateUrl: './stack-details.component.html'
 })
 
 export class StackDetailsComponent implements OnChanges {
@@ -23,6 +36,15 @@ export class StackDetailsComponent implements OnChanges {
     @Input() stackResponse;
 
     @ViewChild('crowdModule') modalCrowdModule: any;
+
+    /**
+     * New Stack Report Revamp - Begin
+     */
+     public cardDetails: any = {};
+     public genericInformation: MGenericStackInformation = null;
+    /**
+     * New Stack Report Revamp - End
+     */
 
     public errorMessage: any = {};
     public cache: string = '';
@@ -53,6 +75,22 @@ export class StackDetailsComponent implements OnChanges {
 
     private stackId: string;
     private subPolling: any;
+
+    private reportSummaryUtils = new ReportSummaryUtils();
+
+    /**
+     * New Stack Report Revamp - Begin
+     */
+    public handleCardClick(cardDetails: any): void {
+        this.genericInformation = new MGenericStackInformation(
+            this.stackId,
+            this.getBaseUrl(this.stack)
+        );
+        this.cardDetails = cardDetails;
+    }
+    /**
+     * New Stack Report Revamp - End
+     */
 
     public showStackModal(event: Event): void {
         event.preventDefault();
@@ -118,6 +156,12 @@ export class StackDetailsComponent implements OnChanges {
         };
     }
 
+    public tabDeSelection(tab: any): void {
+        if (tab) {
+            tab['active'] = false;
+        }
+    }
+
     ngOnChanges(): void {
         if (this.stack && this.stack !== this.cache) {
             this.cache = this.stack;
@@ -143,6 +187,21 @@ export class StackDetailsComponent implements OnChanges {
     }
 
     constructor(private stackAnalysisService: StackAnalysesService) {}
+    /**
+     * New Revamp - Begin
+     * https://recommender.api.openshift.io/api/v1/stack-analyses/
+     */
+    private getBaseUrl(url: string): string {
+        if (url && url !== '') {
+            let splitter: string = 'api/v1';
+            return url.indexOf(splitter) !== -1 ? url.split(splitter)[0] : '';
+        }
+        return '';
+    }
+
+    /**
+     * New Revamp - End
+     */
 
     private handleError(error: any): void {
         this.errorMessage = error;
@@ -215,6 +274,14 @@ export class StackDetailsComponent implements OnChanges {
                 title: 'Updating ...'
             });
         }
+    }
+
+    private ifManifestHasWarning(manifest: ResultInformationModel): boolean {
+        let isSecurityWarning = this.reportSummaryUtils.getSecurityReportCard(manifest.user_stack_info).hasWarning;
+        let isInsightsWarning = this.reportSummaryUtils.getInsightsReportCard(manifest.recommendation).hasWarning;
+        let isLicenseWarning = this.reportSummaryUtils.getLicensesReportCard(manifest.user_stack_info).hasWarning;
+        console.log('does manifest has warning:', isSecurityWarning || isInsightsWarning || isLicenseWarning ? true : false);
+        return isSecurityWarning || isInsightsWarning || isLicenseWarning ? true : false;
     }
 
     private init(): void {

@@ -25,13 +25,16 @@ export class ComponentFeedbackComponent implements OnChanges {
 
     constructor(private feedbackService: ComponentFeedbackService) {}
 
-    public handleFeedback(type: boolean): void {
-        this.feedback.feedbackType = type;
-        let subscription = this.feedbackService.postFeedback(this.feedback);
-        if (subscription) {
-            subscription.subscribe((result) => {
-                console.log(result);
-            });
+    public handleFeedback(event: MouseEvent, type: boolean): void {
+        event.stopPropagation();
+        if (this.feedback && this.feedback.feedbackTemplate) {
+            this.feedback.feedbackTemplate.feedback_type = type;
+            let subscription = this.feedbackService.postFeedback(this.feedback);
+            if (subscription) {
+                subscription.subscribe((result) => {
+                    console.log(result);
+                });
+            }
         }
     }
 

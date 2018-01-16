@@ -14,7 +14,8 @@ export class MReportSummaryTitle {
 export class MTab {
     constructor(
         public title: string,
-        public content: MReportInformation
+        public content: MReportInformation,
+        public active: boolean = false
     ) {}
 }
 
@@ -34,6 +35,7 @@ export class MReportSummaryCard {
     reportSummaryTitle: MReportSummaryTitle;
     reportSummaryDescription: string;
     reportSummaryContent: MReportSummaryContent;
+    hasWarning?: boolean;
 }
 
 export class MProgressMeter {
@@ -84,6 +86,22 @@ export class MSecurityDetails {
     ) {}
 }
 
+export class MLicenseInformation {
+    constructor(
+        public licenses: Array<string>,
+        public unknownLicenses: Array<string>,
+        public hasLicenseIssue: boolean,
+        public licensesAffected: Array<MLicensesAffected> = null
+    ) {}
+}
+
+export class MWorkItem {
+    constructor(
+        public isWorkItemCreated = false,
+        public url?: string
+    ) {}
+}
+
 export class MComponentInformation {
     constructor(
         public name: string,
@@ -100,7 +118,34 @@ export class MComponentInformation {
         public action: string = null,
         public needsExpansion: boolean = true,
         public recommendation: MRecommendationInformation = null,
-        public isOpen: boolean = false
+        public isOpen: boolean = false,
+        public licenseInformation: MLicenseInformation,
+        public ecosystem: string,
+        public manifestFilePath?: string,
+        public workItem = new MWorkItem()
+    ) {}
+}
+
+export class MStackLicenseConflictDetails {
+    constructor(
+        public conflictedWithLicense: string,
+        public conflictedWithComponent: string,
+        public conflictedForLicense: string
+    ) {}
+}
+
+export class MConflictsWithInLicenses {
+    constructor(
+        public license1: string,
+        public license2: string
+    ) {}
+}
+
+export class MLicensesAffected {
+    constructor(
+        public affectedLicenses: Array<MConflictsWithInLicenses> = null,
+        public conflictType: string,
+        public conflictDetails: Array<MStackLicenseConflictDetails> = null
     ) {}
 }
 
@@ -108,9 +153,11 @@ export class MRecommendationInformation {
     constructor(
         public type: string, // Alternate or companion
         public reason: string = null,
-        public feedback: boolean,
+        public feedback: MComponentFeedback = null,
         public confidenceScore: MProgressMeter,
-        public componentInformation: MComponentInformation
+        public componentInformation: MComponentInformation,
+        public manifestFilePath?: string,
+        public workItem = new MWorkItem()
     ) {}
 }
 
@@ -149,17 +196,25 @@ export class MCardDetails {
 
 export class MGenericStackInformation {
     constructor(
-        public stackId: string
+        public stackId: string,
+        public baseUrl: string
+    ) {}
+}
+
+export class MFeedbackTemplate {
+    constructor(
+        public stack_id: string,
+        public recommendation_type: string,
+        public package_name: string,
+        public feedback_type: boolean = null,
+        public ecosystem: string
     ) {}
 }
 
 export class MComponentFeedback {
     constructor(
-        public stackId: string,
-        public recommendationType: string,
-        public packageName: string,
-        public feedbackType: boolean = null,
-        public ecosystem: string
+        public feedbackTemplate: MFeedbackTemplate,
+        public baseUrl: string
     ) {}
 }
 /** Bottom Section */

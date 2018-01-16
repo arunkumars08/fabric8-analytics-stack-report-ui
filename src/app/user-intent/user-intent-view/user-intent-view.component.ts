@@ -6,17 +6,17 @@ import { UserIntentService } from '../user-intent.service';
 
 @Component({
     selector: 'f8-user-intent-view',
-    templateUrl: './user-intent-view.component.html',
     providers: [UserIntentService],
-    styleUrls: ['./user-intent-view.component.scss']
+    styleUrls: ['./user-intent-view.component.less'],
+    templateUrl: './user-intent-view.component.html'
 })
 
 export class UserIntentViewComponent implements OnInit {
     @Input() gatewayConfig;
 
-    public masterTagList:any;
-    public modelContent:any = {};
-    public addedTags:any;
+    public masterTagList: any;
+    public modelContent: any = {};
+    public addedTags: any;
 
     constructor(private route: Router, private userIntentService: UserIntentService) {
         window.onhashchange = () => {
@@ -29,7 +29,6 @@ export class UserIntentViewComponent implements OnInit {
        this.addMasterTagList();
        this.getUnknownComponentEcosystem();
     }
-    
 
     ngOnInit(): void {
         this.onAppLoad();

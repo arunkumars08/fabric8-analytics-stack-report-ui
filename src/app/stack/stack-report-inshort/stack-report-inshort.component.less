@@ -1,15 +1,44 @@
-$color-pf-black-500: #8b8d8f;
-
-.stack-level-information {
+.stack-report-inshort {
+    .error-class {
+        position: relative;
+        margin-top: 100px;
+        text-align: center;
+    }
     .center-text {
         margin: 0 auto;
+        text-align: center;
     }
-    .summary-inshort {
+    .active-menu-item {
+        .nav-link {
+            &.active {
+                color: #000;
+                font-weight: bold;
+            }
+        }
+    }
+    .pre-loader {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: rgba(255, 255, 255, .5);
+        z-index: 99;
+        .pre-loader-spinner {
+            top: 50%;
+        }
+    }
+    .stack-report-snippet {
+        .findings-inshort {
+            font-size: 12px;
+            margin: 10px;
+        }
+        .summary-inshort {
             display: flex;
             .stat-box {
                 display: flex;
                 flex-direction: column;
-                height: 200px;
+                height: 150px;
                 h3 {
                     background: #ededed;
                     margin: 0;
@@ -30,68 +59,26 @@ $color-pf-black-500: #8b8d8f;
                 .stat-content {
                     align-items: center;
                     display: flex;
-                    flex: 6;
-                    .flex-1 { flex: 1; }
-                    .flex-2 { flex: 2; }
-                    .flex-3 { flex: 3; }
-                    .flex-4 { flex: 4; }
-                    &.usage-outlier {
-                        flex: 6;
-                        justify-content: center;
+                    flex: 4;
+                    .flex-1 {
+                        flex: 1;
                     }
-                    &.license-area {
+                    .flex-2 {
+                        flex: 2;
+                    }
+                    &.usage-outlier {
+                        flex: 4;
+                        justify-content: center;
+                        padding: 0 10px;
+                    }
+                    &.chart-area {
                         text-align: center;
-                        flex: 6;
-                        .conflict-license {
-                            padding-left: 5px;
+                        flex: 4;
+                        .c3-chart-arcs-title {
+                            font-size: 10px;
                         }
-                        .conflict-license-direction-icon {
-                            color: $color-pf-black-500;
-                            font-size: 35px;
-                        }
-                        .conflict-license-container {
-                            display: flex;
-                            flex-flow: row wrap;
-                            .packages {
-                                color: $color-pf-black-500;
-                                font-size: 15px;
-                                text-align: right;
-                                .conflict-group {
-                                    border-bottom: $color-pf-black-500 1px solid;
-                                }
-                                span.fa {
-                                    margin: 0 0 0 10px;
-                                }
-                                .ellipsis-icon {
-                                    color: $color-pf-black-500;
-                                    font-size: 25px;
-                                    margin: 10px 4px 0 0;
-                                }
-                            }
-                            .licenses {
-                                color: $color-pf-black-500;
-                                font-size: 15px;
-                                text-align: left;
-                                .conflict-group {
-                                    border-bottom: $color-pf-black-500 1px solid;
-                                    padding-left: 10px;
-                                    margin-right: 45px;
-                                }   
-                            }
-                            &.popover {
-                                flex-flow: column;
-                                max-width: 400px;
-                                .license-template {
-                                    display: flex;
-                                    line-height: 25px;
-                                    width: 350px;
-                                    .licenses {
-                                        .conflict-group {
-                                            margin-right: 0;
-                                        }
-                                    }
-                                }
-                            }
+                        f8-chart {
+                            margin: 0 auto;
                         }
                     }
                     .metric {
@@ -132,40 +119,39 @@ $color-pf-black-500: #8b8d8f;
                     flex: 2;
                 }
                 &.stack-license-stat {
-                    flex: 2;
+                    flex: 3;
                 }
                 &.security-issues-stat {
+
                     .cve-message {
                         font-size: 12px;
                         color: #777;
                         font-weight: 100;
                     }
                     .cvss-id {
-                        font-size: 15px;
+                        font-size: 10px;
                         font-weight: 100;
                         margin-top: 5px;
 
                         i {
-                            font-size: 25px;
+                            font-size: 12px;
                             cursor: pointer;
                             color: #ff7f0e;
 
-                            &.warning-red-color::before {
-                                color: #cc0000;
+                            &.warning-red-color:before {
+                                color: #c00;
                             }
                         }
                     }
 
                     .cvss-data {
-                        height: 50px;
                         margin-top: 10px;
 
                         & > div {
-                            height: 100%;
                             position: relative;
 
                             .cvss-score {
-                                font-size: 20px;
+                                font-size: 12px;
                                 font-weight: 100;
                             }
 
@@ -175,14 +161,8 @@ $color-pf-black-500: #8b8d8f;
                                 bottom: 6px;
 
                                 .label-1 {
-                                    font-size: 15px;
+                                    font-size: 12px;
                                 }
-                            }
-
-                            .cvss-indication {
-                                position: absolute;
-                                right: 20px;
-                                bottom: 6px;
                             }
                         }
                     }
@@ -194,4 +174,20 @@ $color-pf-black-500: #8b8d8f;
                 align-items: stretch;
             }
         }
+        .recommendations-inshort {
+            .recommendation-components {
+                &:before {
+                    content: '';
+                    width: 10px;
+                    height: 10px;
+                    display: inline-block;
+                    background: #000;
+                    margin-left: 5px;
+                }
+            }
+        }
+    }
+    .show-full-report {
+        margin: 10px 0 10px 10px;
+    }
 }

@@ -3,9 +3,9 @@ import {ActivatedRoute, ParamMap} from '@angular/router';
 
 @Component({
     selector: 'f8-user-intent',
-    templateUrl: './user-intent.component.html',
+    styleUrls: ['./user-intent.component.less'],
     encapsulation: ViewEncapsulation.None,
-    styleUrls: ['./user-intent.component.scss']
+    templateUrl: './user-intent.component.html'
 })
 
 export class UserIntentComponent implements OnInit {

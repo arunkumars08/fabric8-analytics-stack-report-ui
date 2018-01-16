@@ -1,57 +1,70 @@
 <div class="stack-report">
   <div *ngIf="!error">
-    <tabset *ngIf="dataLoaded">
-        <tab *ngFor="let tabz of tabs"
-            [heading]="tabz.title"
-            (select)="tabSelection(tabz)"
-            (removed)="removeTabHandler(tabz)"
-            [customClass]="tabz.active ? 'active-menu-item' : 'inactive-menu'">
-            <accordion>
-              <accordion-group
-                   [isOpen]="true"
-                   [panelClass]="customClass"
-                   [isDisabled]="true">
-                    <div accordion-heading>
-                      <div class="accordion-heading" accordion-heading>
-                        Stack report
+      <tabset *ngIf="dataLoaded">
+          <tab *ngFor="let tabz of tabs"
+              (select)="tabSelection(tabz)"
+              (deselect)="tabDeSelection(tabz)"
+              (removed)="removeTabHandler(tabz)"
+              [customClass]="tabz.active ? 'active-menu-item' : 'inactive-menu'">
+              <ng-template tabHeading>
+                <i *ngIf="tabz.hasWarning" class="pficon-warning-triangle-o"></i>
+                <span [innerHtml]="tabz.title" style="margin-left: 5px"></span>
+              </ng-template>
+              <!-- Stack Report Design Revamp - BEGIN -->
+              <analytics-report-summary (onCardClick)="handleCardClick($event)" [report]="tabz.content"></analytics-report-summary>
+              <card-details [genericInformation]="genericInformation && genericInformation" *ngIf="cardDetails" [cardDetails]="cardDetails" [repoInfo]="repoInfo"></card-details>
+              <!-- Stack Report Design Revamp - END -->
+
+
+              <!--<accordion>
+                <accordion-group
+                    [isOpen]="true"
+                    [panelClass]="customClass"
+                    [isDisabled]="true">
+                      <div accordion-heading>
+                        <div class="accordion-heading" accordion-heading>
+                          Stack summary
+                        </div>
+                        <div class="accordion-sub-heading">
+                          [Components: <b>{{analysis && analysis.stackLevel}}</b>]
+                        </div>
                       </div>
-                      <div class="accordion-sub-heading">
-                        [Components: <b>{{analysis && analysis.stackLevel}}</b>]
-                      </div>
+                      <stack-level-information (changeFilter)="handleChangeFilter($event)" [outliers]="stackLevelOutliers" [userStack]="tabz && tabz.content && tabz.content.user_stack_info"></stack-level-information>
+                </accordion-group>
+                <accordion-group #grouped [isOpen]="true" [panelClass]="customClass">
+                  <div accordion-heading>
+                    <div class="accordion-heading" accordion-heading>
+                      Detailed analysis of your stack components
                     </div>
-                    <stack-level-information (changeFilter)="handleChangeFilter($event)" [outliers]="stackLevelOutliers" [userStack]="tabz && tabz.content && tabz.content.user_stack_info"></stack-level-information>
-              </accordion-group>
-              <accordion-group #grouped [isOpen]="true" [panelClass]="customClass">
-                <div accordion-heading>
-                  <div class="accordion-heading" accordion-heading>
-                    Detail analysis of your stack components
+                    <i class="pull-right accordion-indicator float-xs-right glyphicon"
+                      [ngClass]="{'glyphicon-chevron-down': grouped?.isOpen, 'glyphicon-chevron-right': !grouped?.isOpen}"></i>
+                    <div class="accordion-sub-heading">
+                      <b>{{analysis && analysis.alternate}}</b>
+                    </div>
                   </div>
-                  <i class="pull-right accordion-indicator float-xs-right glyphicon"
-                    [ngClass]="{'glyphicon-chevron-down': grouped?.isOpen, 'glyphicon-chevron-right': !grouped?.isOpen}"></i>
-                  <div class="accordion-sub-heading">
-                    <b>{{analysis && analysis.alternate}}</b>
+                  <component-level-information [data]="repoInfo" [filterBy]="componentFilterBy" [header]="componentLevel.header" [subHeader]="componentLevel.subHeader" [component]="componentLevelInformation"></component-level-information>
+                </accordion-group>
+                <accordion-group #companion [panelClass]="customClass">
+                  <div accordion-heading>
+                    <div class="accordion-heading" accordion-heading>
+                      Additional components recommended by Openshift IO
+                    </div>
+                    <i class="pull-right accordion-indicator float-xs-right glyphicon"
+                      [ngClass]="{'glyphicon-chevron-down': companion?.isOpen, 'glyphicon-chevron-right': !companion?.isOpen}"></i>
+                    <div class="accordion-sub-heading">
+                      <b>{{analysis && analysis.companion}}</b>
+                    </div>
                   </div>
-                </div>
-                <component-level-information [data]="repoInfo" [filterBy]="componentFilterBy" [header]="componentLevel.header" [subHeader]="componentLevel.subHeader" [component]="componentLevelInformation"></component-level-information>
-              </accordion-group>
-              <accordion-group #companion [panelClass]="customClass">
-                <div accordion-heading>
-                  <div class="accordion-heading" accordion-heading>
-                    Additional components recommended by Openshift IO
-                  </div>
-                  <i class="pull-right accordion-indicator float-xs-right glyphicon"
-                    [ngClass]="{'glyphicon-chevron-down': companion?.isOpen, 'glyphicon-chevron-right': !companion?.isOpen}"></i>
-                  <div class="accordion-sub-heading">
-                    <b>{{analysis && analysis.companion}}</b>
-                  </div>
-                </div>
-                <component-level-information [data]="repoInfo" [header]="companionLevel.header" [subHeader]="companionLevel.subHeader" [isCompanion]="true" [component]="companionLevelRecommendation"></component-level-information>
-              </accordion-group>
-            </accordion>
-        </tab>
-    </tabset>
+                  <component-level-information [data]="repoInfo" [header]="companionLevel.header" [subHeader]="companionLevel.subHeader" [isCompanion]="true" [component]="companionLevelRecommendation"></component-level-information>
+                </accordion-group>
+              </accordion>-->
+          </tab>
+      </tabset>
+
+
+
   </div>
-  <feedback *ngIf="dataLoaded" [config]="feedbackConfig" [gateway]="gatewayConfig"></feedback>
+  <!--<feedback *ngIf="dataLoaded" [config]="feedbackConfig" [gateway]="gatewayConfig"></feedback>-->
   <div *ngIf="!dataLoaded" class="pre-loader">
     <div class="pre-loader-spinner spinner spinner-lg"></div>
   </div>

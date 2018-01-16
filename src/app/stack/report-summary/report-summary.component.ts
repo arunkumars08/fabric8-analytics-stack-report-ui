@@ -30,6 +30,7 @@ import {
     MSecurityIssue,
     MProgressMeter
 } from '../models/ui.model';
+import { ReportSummaryUtils } from '../utils/report-summary-utils';
 
 @Component({
     selector: 'analytics-report-summary',
@@ -45,17 +46,12 @@ export class ReportSummaryComponent implements OnInit, OnChanges {
     public reportSummaryContent: MReportSummaryContent;
     public reportSummaryTitle: MReportSummaryTitle;
     public reportSummaryDescription: string;
+    public notification = null;
+    private reportSummaryUtils = new ReportSummaryUtils();
 
-    public notification: any = {
-        warning: {
-            bg: '#ff6162',
-            icon: 'pficon-warning-triangle-o'
-        },
-        good: {
-            bg: 'GREEN',
-            icon: 'fa fa-check'
-        }
-    };
+    constructor() {
+        this.notification = this.reportSummaryUtils.notification;
+    }
 
     public cardTypes: any = {
         SECURITY: 'security',
@@ -67,19 +63,19 @@ export class ReportSummaryComponent implements OnInit, OnChanges {
     public titleAndDescription: any = {
         [this.cardTypes.SECURITY]: {
             title: 'Components with security issues in your stack',
-            description: 'Description'
+            description: 'OSIO Analytics identifies security issues in your stack. Click this card to see further details of the security tasks affecting your stack.'
         },
         [this.cardTypes.INSIGHTS]: {
             title: 'Insights on alternate or additional components that can augment your stack',
-            description: 'Description'
+            description: 'OSIO Analytics identifies components that are rarely used in similar stacks, and suggests alternate and additional components that can enhance your stack. Click this card to see detailed suggestions on alternate and additional components.'
         },
         [this.cardTypes.LICENSES]: {
             title: 'License details of components in your stack',
-            description: 'Description'
+            description: 'OSIO Analytics identifies the stack level license, the conflicting licenses, and the unknown licenses for your stack. Click this card to see detailed information on the conflicting and unknown licenses in your stack.'
         },
         [this.cardTypes.COMP_DETAILS]: {
             title: 'Component details of your manifest file',
-            description: 'Description'
+            description: 'OSIO Analytics identifies the total number of components, analyzes them, and provides details on security, usage, and license issues in your components. It also lists components unknown to OSIO.'
         }
     };
 
@@ -150,187 +146,24 @@ export class ReportSummaryComponent implements OnInit, OnChanges {
     }
 
     private getSecurityReportCard(): MReportSummaryCard {
-        // Initialize the new card
-        let securityCard: MReportSummaryCard = this.newCardInstance();
-
-        securityCard.identifier = this.cardTypes.SECURITY;
-        securityCard.reportSummaryTitle.titleIcon = 'fa fa-shield';
-        securityCard.reportSummaryDescription = 'This shows the Security Description and it can go to more than a line';
-        securityCard.reportSummaryTitle.titleText = 'Security Issues';
-        securityCard.reportSummaryContent.infoEntries = [];
-
-
-        if (this.report.user_stack_info &&
-            this.report.user_stack_info.analyzed_dependencies &&
-            this.report.user_stack_info.analyzed_dependencies.length > 0) {
-
-                let securityIssues: number = 0;
-                let maxIssue: MSecurityIssue = null,
-                temp: SecurityInformationModel = null;
-
-                let analyzedDependencies: Array<ComponentInformationModel>;
-                analyzedDependencies = this.report.user_stack_info.analyzed_dependencies;
-                analyzedDependencies.forEach((analyzed) => {
-                    let compSecuritInfo: MSecurityDetails = this.getComponentSecurityInformation(analyzed);
-                    securityIssues = compSecuritInfo.totalIssues;
-                    if (!maxIssue) {
-                        maxIssue = compSecuritInfo.highestIssue;
-                    } else {
-                        if (compSecuritInfo && compSecuritInfo.highestIssue) {
-                            maxIssue = maxIssue.cvss > compSecuritInfo.highestIssue.cvss ? maxIssue : compSecuritInfo.highestIssue;
-                        }
-                    }
-                });
-                let totalComponentsWithMaxScore: number = 0;
-                if (maxIssue) {
-                    analyzedDependencies.forEach((analyzed) => {
-                        if (analyzed.security && analyzed.security.length > 0) {
-                            let currSecurity: Array<SecurityInformationModel> = analyzed.security;
-                            let filters: Array<SecurityInformationModel>;
-                            filters = currSecurity.filter((security) => {
-                                return security.CVSS === maxIssue.cvss;
-                            });
-                            totalComponentsWithMaxScore += filters ? filters.length : 0;
-                        }
-                    });
-                }
-
-                let totalIssuesEntry: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-                totalIssuesEntry.infoText = 'Total issues found';
-                totalIssuesEntry.infoValue = securityIssues;
-                securityCard.reportSummaryContent.infoEntries.push(totalIssuesEntry);
-
-                if (maxIssue) {
-                    let maxIssueEntry: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-                    maxIssueEntry.infoText = 'Highest CVSS Score';
-                    maxIssueEntry.infoValue = maxIssue.cvss;
-                    maxIssueEntry.infoType = 'progress';
-                    maxIssueEntry.config = {
-                        headerText: maxIssue.cvss + ' / ' + 10,
-                        value: Number(maxIssue.cvss),
-                        bgColor: Number(maxIssue.cvss) >= 7 ? '#ff6162' : 'ORANGE',
-                        footerText: 'No. of components with this CVSS Score: ' + totalComponentsWithMaxScore
-                    };
-                    securityCard.reportSummaryContent.infoEntries.push(maxIssueEntry);
-                    securityCard.reportSummaryTitle.notificationIcon = this.notification.warning.icon;
-                    securityCard.reportSummaryTitle.notificationIconBgColor = this.notification.warning.bg;
-                } else {
-                    securityCard.reportSummaryTitle.notificationIcon = this.notification.good.icon;
-                    securityCard.reportSummaryTitle.notificationIconBgColor = this.notification.good.bg;
-                }
-
-        } else {
-            // Handle for no analyzed_dependencies
-        }
-        return securityCard;
+        return this.reportSummaryUtils.getSecurityReportCard(this.report.user_stack_info);
     }
 
     private getInsightsReportCard(): MReportSummaryCard {
-        let insightsCard: MReportSummaryCard = this.newCardInstance();
-
-        insightsCard.identifier = this.cardTypes.INSIGHTS;
-        insightsCard.reportSummaryTitle.titleText = 'Insights';
-        insightsCard.reportSummaryTitle.titleIcon = 'pficon-zone';
-        insightsCard.reportSummaryDescription = 'This shows the Insights Description and it can go to more than a line';
-        insightsCard.reportSummaryContent.infoEntries = [];
-
-        let recommendation: RecommendationsModel;
-        recommendation = this.report.recommendation;
-        let usageOutliersCount: number = 0, companionCount: number = 0;
-        if (recommendation) {
-            let usage = recommendation.usage_outliers;
-            usageOutliersCount = usage ? usage.length : 0;
-            companionCount = recommendation.companion ? recommendation.companion.length : 0;
-
-            let totalInsights: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            totalInsights.infoText = 'Total Insights';
-            totalInsights.infoValue = usageOutliersCount + companionCount;
-            insightsCard.reportSummaryContent.infoEntries.push(totalInsights);
-
-            let outliersInsights: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            outliersInsights.infoText = 'Usage Outliers';
-            outliersInsights.infoValue = usageOutliersCount;
-            insightsCard.reportSummaryContent.infoEntries.push(outliersInsights);
-
-            let companionInsights: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            companionInsights.infoText = 'Companion Components';
-            companionInsights.infoValue = companionCount;
-            insightsCard.reportSummaryContent.infoEntries.push(companionInsights);
-
-            insightsCard.reportSummaryTitle.notificationIcon = this.notification.good.icon;
-            insightsCard.reportSummaryTitle.notificationIconBgColor = this.notification.good.bg;
-            if (usageOutliersCount > 0) {
-                insightsCard.reportSummaryTitle.notificationIcon = this.notification.warning.icon;
-                insightsCard.reportSummaryTitle.notificationIconBgColor = this.notification.warning.bg;
-            }
-
-        } else {
-            // Handle no recommendations block scenario
-        }
-
-        return insightsCard;
+        return this.reportSummaryUtils.getInsightsReportCard(this.report.recommendation);
     }
 
     private getLicensesReportCard(): MReportSummaryCard {
-        let licensesCard: MReportSummaryCard = this.newCardInstance();
-
-        licensesCard.identifier = this.cardTypes.LICENSES;
-        licensesCard.reportSummaryTitle.titleText = 'Licenses';
-        licensesCard.reportSummaryTitle.titleIcon = 'fa fa-bolt';
-        licensesCard.reportSummaryDescription = 'This shows the Licenses Description and it can go to more than a line';
-        licensesCard.reportSummaryContent.infoEntries = [];
-
-        if (this.report.user_stack_info &&
-            this.report.user_stack_info.license_analysis) {
-            let licenseAnalysis: StackLicenseAnalysisModel;
-            licenseAnalysis = this.report.user_stack_info.license_analysis;
-
-            let stackLicense: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            stackLicense.infoText = 'Stack Level License';
-            let stackLicenses = licenseAnalysis.f8a_stack_licenses;
-            stackLicense.infoValue = stackLicenses && stackLicenses.length > 0 ? stackLicense[0] : 'NONE';
-            licensesCard.reportSummaryContent.infoEntries.push(stackLicense);
-
-            let conflictLicense: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            conflictLicense.infoText = 'License Conflicts';
-            let conflictLicenses = licenseAnalysis.conflict_packages;
-            conflictLicense.infoValue = conflictLicenses ? conflictLicenses.length : 0;
-            licensesCard.reportSummaryContent.infoEntries.push(conflictLicense);
-
-            let unknownLicense: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            unknownLicense.infoText = 'Unknown Licenses';
-            let unknownLicenses = licenseAnalysis.unknown_licenses.really_unknown;
-            unknownLicense.infoValue = unknownLicenses ? unknownLicenses.length : 0;
-            licensesCard.reportSummaryContent.infoEntries.push(unknownLicense);
-
-            if (stackLicense.infoValue !== 'NONE') {
-                let restrictiveLicenses: MReportSummaryInfoEntry = new MReportSummaryInfoEntry();
-            restrictiveLicenses.infoText = 'Restrictive License(s)';
-                let restrictive = licenseAnalysis.outlier_packages;
-                unknownLicense.infoValue = restrictive ? restrictive.length : 0;
-                licensesCard.reportSummaryContent.infoEntries.push(restrictiveLicenses);
-            }
-
-            licensesCard.reportSummaryTitle.notificationIcon = this.notification.good.icon;
-            licensesCard.reportSummaryTitle.notificationIconBgColor = this.notification.good.bg;
-            if (conflictLicenses.length > 0 || unknownLicenses.length > 0) {
-                licensesCard.reportSummaryTitle.notificationIcon = this.notification.warning.icon;
-                licensesCard.reportSummaryTitle.notificationIconBgColor = this.notification.warning.bg;
-            }
-        } else {
-            // Handle no licenses section scenario
-        }
-
-        return licensesCard;
+        return this.reportSummaryUtils.getLicensesReportCard(this.report.user_stack_info);
     }
 
     private getComponentDetailsReportCard(): MReportSummaryCard {
-        let componentDetailsCard: MReportSummaryCard = this.newCardInstance();
+        let componentDetailsCard: MReportSummaryCard = this.reportSummaryUtils.newCardInstance();
 
         componentDetailsCard.identifier = this.cardTypes.COMP_DETAILS;
         componentDetailsCard.reportSummaryTitle.titleIcon = 'fa fa-cube';
         componentDetailsCard.reportSummaryTitle.titleText = 'Component Details';
-        componentDetailsCard.reportSummaryDescription = 'This shows the Component Details Description and it can go to more than a line';
+        componentDetailsCard.reportSummaryDescription = this.titleAndDescription[this.cardTypes.COMP_DETAILS].description;
         componentDetailsCard.reportSummaryContent.infoEntries = [];
 
         if (this.report.user_stack_info
@@ -373,6 +206,8 @@ export class ReportSummaryComponent implements OnInit, OnChanges {
             cards[3] = this.getComponentDetailsReportCard();
         }
         this.reportSummaryCards = cards;
+        // Select the first card by default
+        this.handleSummaryClick(cards[0]);
     }
 
     private paintView(): void {

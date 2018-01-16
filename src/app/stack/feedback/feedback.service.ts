@@ -3,29 +3,29 @@ import { Http, Response, Headers, RequestOptions  } from '@angular/http';
 import { AuthenticationService } from 'ngx-login-client';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/map';
+import 'rxjs/operators/map';
 
 @Injectable()
 export class FeedbackService {
-    constructor(private http: Http) {}
-
-    public submit(feedback: any, params?: any): Observable<any> {
-        let url: string = 'api/v1/user-feedback';
-        if (params) {
-            if (params['access_token']) {
-                if (params['config'] && params['config']['api_url']) {
-                    url = params['config']['api_url'] + url;
-                    let headers: Headers = new Headers({'Content-Type': 'application/json'});
-                    headers.append('Authorization', 'Bearer ' + params['access_token']);
-                    return this.http
-                        .post(url, JSON.stringify(feedback), {
-                            headers: headers
-                        })
-                        .map(this.extractData)
-                        .catch(this.handleError);
-                }
+    private headers: Headers = new Headers({'Content-Type': 'application/json'});
+    constructor(
+        private http: Http,
+        private auth: AuthenticationService) {
+            if (this.auth.getToken() !== null) {
+                this.headers.set('Authorization', 'Bearer ' + this.auth.getToken());
             }
         }
+
+    public submit(feedback: any): Observable<any> {
+        let url: string = 'https://recommender.api.openshift.io/api/v1/user-feedback';
+        let options: RequestOptions = new RequestOptions({
+            headers: this.headers
+        });
+
+        return this.http
+            .post(url, JSON.stringify(feedback), options)
+            .map(this.extractData)
+            .catch(this.handleError);
     }
 
     private extractData(res: Response) {
