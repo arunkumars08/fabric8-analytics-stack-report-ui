@@ -1,7 +1,6 @@
 const webpack = require('webpack');
 const helpers = require('./helpers');
 const path = require('path');
-const sass = require('./sass');
 
 const AssetsPlugin = require('assets-webpack-plugin');
 const autoprefixer = require('autoprefixer');
@@ -20,19 +19,16 @@ const ngcWebpack = require('ngc-webpack');
 const NormalModuleReplacementPlugin = require('webpack/lib/NormalModuleReplacementPlugin');
 const OptimizeJsPlugin = require('optimize-js-plugin');
 const ProvidePlugin = require('webpack/lib/ProvidePlugin');
-const sassLintPlugin = require('sasslint-webpack-plugin');
 const ScriptExtHtmlWebpackPlugin = require('script-ext-html-webpack-plugin');
 const UglifyJsPlugin = require('webpack/lib/optimize/UglifyJsPlugin');
-
+const StyleLintPlugin = require('stylelint-webpack-plugin');
 const precss = require('precss');
 
 // ExtractTextPlugin
 const extractCSS = new ExtractTextPlugin({
   filename: '[name].[id]' + (helpers.isProd ? '.[contenthash]' : '') + '.css',
   allChunks: true
-}
-);
-
+});
 
 /*
  * Webpack Constants
@@ -80,6 +76,19 @@ module.exports = {
         exclude: [/\.(spec|e2e)\.ts$/]
       },
 
+      /* HTML Linter
+       * Checks all files against .htmlhintrc
+       */
+      {
+        enforce: 'pre',
+        test: /\.html$/,
+        loader: 'htmlhint-loader',
+        exclude: [/node_modules/],
+        options: {
+          configFile: './.htmlhintrc'
+        }
+      },
+
       // Support for *.json files.
       {
         test: /\.json$/,
@@ -93,46 +102,46 @@ module.exports = {
         })
       },
       {
-        test: /^(?!.*component).*\.scss$/,
-        use: extractCSS.extract({
-          fallback: 'style-loader',
-          use: [
-            {
-              loader: 'css-loader',
-              options: {
-                minimize: helpers.isProd,
-                sourceMap: true,
-                context: '/'
-              }
-            }, {
-              loader: 'sass-loader',
-              options: {
-                includePaths: sass.modules.map(function (val) {
-                  return val.sassPath;
-                }),
-                sourceMap: true
-              }
-            }
-          ],
-        })
-      }, {
-        test: /\.component\.scss$/,
+        test: /^(?!.*component).*\.less$/,
         use: [
           {
             loader: 'to-string-loader'
           }, {
             loader: 'css-loader',
             options: {
-              minimize: helpers.isProd,
+              minimize: true,
               sourceMap: true,
               context: '/'
             }
           }, {
-            loader: 'sass-loader',
+            loader: 'less-loader',
             options: {
-              includePaths: sass.modules.map(function (val) {
-                return val.sassPath;
-              }),
+              paths: [
+                path.resolve(__dirname, "../node_modules/patternfly/src/less"),
+                path.resolve(__dirname, "../node_modules/patternfly/node_modules")
+              ],
+              sourceMap: true
+            }
+          }
+        ],
+        test: /\.component\.less$/,
+        use: [
+          {
+            loader: 'to-string-loader'
+          }, {
+            loader: 'css-loader',
+            options: {
+              minimize: true,
+              sourceMap: true,
+              context: '/'
+            }
+          }, {
+            loader: 'less-loader',
+            options: {
+              paths: [
+                path.resolve(__dirname, "../node_modules/patternfly/src/less"),
+                path.resolve(__dirname, "../node_modules/patternfly/node_modules")
+              ],
               sourceMap: true
             }
           }
@@ -186,18 +195,6 @@ module.exports = {
      */
     new CheckerPlugin(),
 
-
-    // new sassLintPlugin({
-    //   configFile: '.sass-lint.yml',
-    //   context: ['inherits from webpack'],
-    //   ignoreFiles: [],
-    //   ignorePlugins: [],
-    //   glob: '**/*.s?(a|c)ss',
-    //   quiet: false,
-    //   failOnWarning: false,
-    //   failOnError: false,
-    //   testing: false
-    // }),
     /**
      * Plugin: ContextReplacementPlugin
      * Description: Provides context to Angular's use of System.import
@@ -379,6 +376,18 @@ module.exports = {
       helpers.root('node_modules/@angular/core/src/facade/math.js')
     ),
     extractCSS,
+
+    /*
+     * StyleLintPlugin
+     */
+    new StyleLintPlugin({
+      configFile: '.stylelintrc',
+      syntax: 'less',
+      context: 'src',
+      files: '**/*.less',
+      failOnError: true,
+      quiet: false,
+    })
 
     // new ngcWebpack.NgcWebpackPlugin({
     //   disabled: !AOT,
